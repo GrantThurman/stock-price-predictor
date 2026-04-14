@@ -6,6 +6,7 @@ from functools import reduce
 def load(path, prefix):
     df = pd.read_csv(path)
 
+
     df.columns = [c.lower().strip().replace('"','') for c in df.columns]
 
     if 'datetime' in df.columns:
@@ -39,6 +40,9 @@ def load(path, prefix):
 
 data_dir = "data"
 dfs = []
+print("files beign loaded")
+for file in sorted(os.listdir(data_dir)):
+    print(file)
 
 for file in os.listdir(data_dir):
     if file.endswith(".csv"):
