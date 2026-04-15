@@ -70,6 +70,21 @@ for file in os.listdir(data_dir):
 feature_count = len(df.columns) - 1
 print("Total features:", feature_count)
 
+# Create label in order to test accuracy
+df["next_day_return"] = df["rtx_close"].pct_change().shift(-1)
+threshold = 0.005 # threshold to determine what is flat
+
+def label_return(r):
+    if r > threshold:
+        return "Up"
+    elif r < -threshold:
+        return "Down"
+    else:
+        return "Flat"
+    
+df["label"] = df["next_day_return"].apply(label_return)
+df.drop(columns=["next_day_return"], inplace=True)
+df = df.dropna()
 
 print(df.isna().sum())
 print(df.head())
