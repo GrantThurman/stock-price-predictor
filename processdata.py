@@ -1,8 +1,11 @@
 import pandas as pd
 import os
 from functools import reduce
+import pandas as pd
+import ta
+from sklearn.preprocessing import StandardScaler
 
-
+## Joining CSVs
 def load(path, prefix):
     df = pd.read_csv(path)
 
@@ -70,10 +73,72 @@ for file in os.listdir(data_dir):
 feature_count = len(df.columns) - 1
 print("Total features:", feature_count)
 
-print(df.isna().sum())
+
+## Feature Engineering
+df.sort_values("date", inplace=True, ascending=True)
+
+df["target"] = df["lmt_close"].shift(-1) - df["lmt_open"].shift(-1)
+df["target"] = df["target"].apply(lambda x: 1 if x > 0 else 0)
+
+df = ta.add_all_ta_features(df, open="lmt_open", high="lmt_high", low="lmt_low", close="lmt_close", volume="lmt_volume")
+df["oil_cci"] = ta.trend.cci(df["oil_high"], df["oil_low"], df["oil_close"], window=10)
+df["oil_rsi"] = ta.momentum.rsi(df["oil_close"], window=14)
+df["lmt_rsi"] = ta.momentum.rsi(df["lmt_close"], window=14)
+df["lmt_MACD"] = ta.trend.macd_diff(df["lmt_close"], window_slow=26, window_fast=12, window_sign=9)
+df["lmt_MACD_signal"] = ta.trend.macd_signal(df["lmt_close"], window_slow=26, window_fast=12, window_sign=9)
+df["SPY_rsi"] = ta.momentum.rsi(df["spy_close"], window=14)
+df["RTX_CMF"] = ta.volume.chaikin_money_flow(df["rtx_high"], df["rtx_low"], df["rtx_close"], df["rtx_volume"], window=20)
+df["RTX_RSI"] = ta.momentum.rsi(df["rtx_close"], window=14)
+df["QQQ_awesome_oscillator"] = ta.momentum.awesome_oscillator(df["qqq_high"], df["qqq_low"], window1=5, window2=34)
+df["QQQ_rsi"] = ta.momentum.rsi(df["qqq_close"], window=14)
+#df["noc_EMA"] = ta.trend.ema_indicator(df["noc_close"], window=12)
+df.drop(columns=["trend_psar_up", "trend_psar_down", "trend_psar_up_indicator", "trend_psar_down_indicator"], inplace=True)
+#df.dropna(inplace=True)
+df = df.dropna(inplace=False)
+
+
+## Summary
 print(df.head())
 print(df.tail())
-#print(df.columns)
-#print(df.shape)
-#print(df.columns.tolist())
-df.to_csv("clean_data/all_data.csv", index=False)
+print(df.shape)
+
+
+## Split data into training, validation, and testing
+n = len(df)
+train_end = int(n * 0.70)
+val_end   = int(n * 0.85)
+train_end_date = df["date"].iloc[train_end]
+val_end_date   = df["date"].iloc[val_end]
+
+train_df = df[df["date"] < train_end_date]
+val_df = df[(df["date"] >= train_end_date) & (df["date"] < val_end_date)]
+test_df = df[df["date"] >= val_end_date]
+
+X_train = train_df.drop(columns=["date", "target"])
+y_train = train_df["target"]
+
+X_val = val_df.drop(columns=["date", "target"])
+y_val = val_df["target"]
+
+X_test = test_df.drop(columns=["date", "target"])
+y_test = test_df["target"]
+
+
+## Normalize data
+# We have to normalize training data first, then use that 
+# mean and standard deviation to normalize validation and test data
+
+scaler = StandardScaler()
+X_train_normal = scaler.fit_transform(X_train)
+X_val_normal = scaler.transform(X_val)
+X_test_normal = scaler.transform(X_test)
+
+
+## Save files
+pd.DataFrame(X_train_normal, columns=X_train.columns).to_csv("clean_data/X_train.csv", index=False)
+pd.DataFrame(X_val_normal, columns=X_val.columns).to_csv("clean_data/X_val.csv", index=False)
+pd.DataFrame(X_test_normal, columns=X_test.columns).to_csv("clean_data/X_test.csv", index=False)
+
+y_train.to_csv("clean_data/y_train.csv", index=False)
+y_val.to_csv("clean_data/y_val.csv", index=False)
+y_test.to_csv("clean_data/y_test.csv", index=False)
