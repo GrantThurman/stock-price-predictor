@@ -96,7 +96,7 @@ df.drop(columns=["trend_psar_up", "trend_psar_down", "trend_psar_up_indicator", 
 #df.dropna(inplace=True)
 df = df.dropna(inplace=False)
 
-
+#df.to_csv("clean_data/final_data.csv")
 ## Summary
 print(df.head())
 print(df.tail())
