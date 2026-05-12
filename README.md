@@ -2,6 +2,9 @@
 
 Predicting the stock price of Lockheed Martin (LMT) using a hybrid CNN-LSTM model.
 
+## Blog Post
+The blog post can be found here: https://medium.com/@grantathurman/stock-price-predictor-0a3b6eea33ad
+
 ## Data Preprocessing 📁
 All raw data is in the `data` folder. This data is used in `processdata.py`, which joins the data into a CSV called `final_data.csv` and six CSVs for training, validation, and testing of the neural networks. These CSVs can all be found in the `clean_data` folder
 
